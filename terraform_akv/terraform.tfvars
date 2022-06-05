@@ -1,0 +1,2 @@
+project = "pyxbringo"
+environment = "dev"
