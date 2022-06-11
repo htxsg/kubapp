@@ -1,3 +1,6 @@
+
+# Assume project, environemnt and region variables already defined
+
 variable "project" {
   type = string
 }
