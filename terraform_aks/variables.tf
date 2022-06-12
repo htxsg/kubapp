@@ -17,5 +17,4 @@ locals {
   acr_name = join("",[var.project,var.environment,"acr"])
   aks_name = join("",[var.project,var.environment,"aks"])
   aks_dns = join("",[var.project,var.environment,"k8s"])
-  
 }

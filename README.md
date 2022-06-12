@@ -8,118 +8,162 @@ A full example environment build on terraform supporting app running on AKS and 
 5. Attach container AKS CLuster
 6. Auto deploy updates
 
-Link the tasks together with Ansible.
 
 | Files | Description |
 |------|-------------|
-| akv_main.tf | Create a based resource group and keyvault within a subscription.|
- 
+| terraform_aks\akv_main.tf | Create a based resource group and keyvault within a subscription.|
+| terraform_aks\acr_main.tf | Add on a container registry.|
+| terraform_aks\aks_main.tf | Add on AKS cluster and link it to the ACR registry.|
 
 
-## Terraform KV
+# Running the Projects
 
+## Create Environment with Terraform
+
+1. The complete terraform files for this project is in the directory `terraform_aks`:
+```
+$ cd terraform_aks
+```
+
+3. Note that the project name is used to generally globally unique name such as AKV and ACR. Edit the project name variable in `teraaform.tfvars`:
+```
+$ vi teraaform.tfvars
+project = "kubappaks"
+environment = "dev"
+```
+
+4. Execute the following commands to create the resources:
+```
+$ terraform init
+$ terrform plan
+$ az login
+$ terraform apply
+```
+
+4. Check the output after terraform apply:
+```
+$ terraform output
+acr_admin_password = <sensitive>
+aks_cluster_name = "kubappaksdevaks"
+client_certificate = <sensitive>
+keyvault_name = "kubappaksdevakv"
+keyvault_uri = "https://kubappaksdevakv.vault.azure.net/"
+kube_config = <sensitive>
+resource_group_id = "/subscriptions/xxxxxxxx-b90b-4a32-8386-xxxxxxxxxxxx/resourceGroups/engaging-tick-rg"
+resource_group_name = "engaging-tick-rg"
+subscription_id = "xxxxxxxx-b90b-4a32-8386-xxxxxxxxxxxx"
+tenant_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+```
+5. Go back to project root directory:
+```
+$ cd ..
+```
+
+## Push Images to Azure Container Registry
+1. Once we confirm that the resources are greated in Azure. The next step is to deploy containers to the created AKS Cluster.
+
+2. We will e using a multi pods example based off [Microsoft Tutorial](https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-prepare-app). Pull the 2 images from public repository:
+```
+$ docker pull mcr.microsoft.com/oss/bitnami/redis:6.0.8
+$ docker pull mcr.microsoft.com/azuredocs/azure-vote-front:v1
+```
+
+3. Tag the images with the project ACR name. In this case `kubappaksdevacr.azurecr.io`:
+```
+$ docker tag mcr.microsoft.com/oss/bitnami/redis:6.0.8 kubappaksdevacr.azurecr.io/example/redis
+$ docker tag mcr.microsoft.com/azuredocs/azure-vote-front:v1 kubappaksdevacr.azurecr.io/example/vote
+```
+
+4. Login to Azure ACR and push container to repository:
+```
+$ az acr login --name kubappaksdevacr.azurecr.io
+$ docker push kubappaksdevacr.azurecr.io/example/redis
+$ docker push kubappaksdevacr.azurecr.io/example/vote
+```
+
+5. List repository to confirm if image is pushed:
+```
+$ az acr repository list -n kubappaksdevacr
+[
+  "example/redis",
+  "example/vote"
+]
+```
+
+## Deploy Application to Cluster
+1. We will use kubectl commandline tool to interact with the AKS cluster. First, we need to get the aks crendentials and save it in the .kube/config file:
+```
+$ az aks get-credentials --resource-group $(terraform output -raw resource_group_name) --name $(terraform output -raw aks_cluster_name)
+```
+
+2. This will be done automatically, howeever, if you are interested you can view the `/.kube/config` file. It will contain entry that looks like the following:
+```
+- name: clusterUser_engaging-tick-rg_kubappaksdevaks
+  user:
+    client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZIVENDQXdXZ0F3SUJBZ0lRVnJjUVgyWUwzZktvS0tSVkQ1R3lpVEFOQmdrcWhraUc5dzBCQVFzRkFEQU4KTVFzd0NRWURWUVFERXdKallUQWVGdzB5TWpBMk1USXdOelV4TVRoYUZ
+    token: e6980eba26e473281b900a
+```
+
+2. Check that the AKS cluster is running by getting the nodes status:
+```
+$ kubectl get nodes
+NAME                              STATUS   ROLES   AGE   VERSION
+aks-default-30452755-vmss000000   Ready    agent   24m   v1.22.6
+aks-default-30452755-vmss000001   Ready    agent   24m   v1.22.6
+```
+
+3. The configuration of the service is described in `azure-vote-all-in-one-redis.yaml'. Edit lines 19 and 60 to replace with the correct image name based on the ACR we created:
+```
+        image: kubappaksdevacr.azurecr.io/example/redis
+        image: kubappaksdevacr.azurecr.io/example/vote  
+```
+
+4. Create a namespace `vote` and deploy services to AKS cluster:
+```
+$ kubectl create namespace vote
+$ kubectl apply -f azure-vote-all-in-one-redis.yaml -n=vote
+```
+
+5. Check ii services are running:
+```
+$ kubectl get service -n=vote
+NAME               TYPE           CLUSTER-IP    EXTERNAL-IP    PORT(S)        AGE
+azure-vote-back    ClusterIP      10.0.169.94   <none>         6379/TCP       3m34s
+azure-vote-front   LoadBalancer   10.0.7.186    20.252.24.75   80:31166/TCP   3m33s
+```
+
+6. Go to public IP to verify that app is acessible from internet. In our example http://20.190.16.45.
+
+
+# Clean Up
+
+1. Delete the services after testing:
+```$ kubectl delete service -n=vote azure-vote-back azure-vote-front 
+service "azure-vote-back" deleted
+service "azure-vote-front" deleted
+```
+
+2. Remove infrastructure:
+```
+$ cd terraform_aks
+$ terraform destroy
+```
+
+# More Information
+
+## akv_main.tf
 This project does the following:
 - Create a resource group
 - Create an azure key value
 - Get tenant and subscription information using [Client Config Datasource](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config)
 
-### Creating the resourcess
 
-1. Execute the following commands to create the resources:
-```
-$ terraform init
-$ terrform plan
-$ az login
-$ terraform apply
-```
+## Resources
+- [Tutorial: Prepare an application for AKS](https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-prepare-app)
+- [Terraform azurerm_kubernetes_cluster](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kubernetes_cluster)
+- [Terraform azurerm_container_registry](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/container_registry)
+- [Azure Container Registry](https://docs.microsoft.com/en-sg/azure/container-registry/)
+- [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-sg/azure/aks/)
 
-2. Cheek the output after terraform apply:
-```
-$ terraform output
-keyvault_name = "pyxbringodevakv"
-keyvault_uri = "https://pyxbringodevakv.vault.azure.net/"
-resource_group_id = "/subscriptions/xxxxxxxx-b90b-4a32-8386-xxxxxxxxxxxx/resourceGroups/wondrous-reindeer-rg"
-subscription_id = "xxxxxxxx-b90b-4a32-8386-xxxxxxxxxxxx"
-tenant_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-
-```
-
-3. Check Azure portal for the resouces created.
-
-
-## Terraform ACR
-
-Manage Azure Active Directory service principals for automation authentication.
-
-Generate service principal and store secret in keyvault.
-
-
-[az ad sp command](https://docs.microsoft.com/en-us/cli/azure/ad/sp?view=azure-cli-latest#az-ad-sp-create-for-rbac)
-
-[Terraform example](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/container_registry)
-
-| File | Description |
-|------|-------------|
-| main.tf |             |
-| variable.tf|             |
-| terraform.tfvars|             |
-| outputs.tf    |             |
-
-```
-$ terraform init
-$ terrform plan
-$ az login
-$ terraform apply
-```
-
-# Terraform AKS Cluster
-- reference network
-
-
-A service principal or managed identity is needed by AKS to dynamically create and manage other Azure resources such as an Azure load balancer or container registry (ACR).
-
-There are many ways to authenticate to the Azure provider. In this tutorial, you will use an Active Directory service principal account. You can learn how to authenticate using a different method here.
-
-First, you need to create an Active Directory service principal account using the Azure CLI. You should see something like the following.
-
-  ```
-  $ az ad sp create-for-rbac
-    {
-    "appId": "4a94e2d3-4541-4103-b9da-b8fb6c5b8122",
-    "displayName": "azure-cli-2022-06-11-08-58-13",
-    "name": "4a94e2d3-4541-4103-b9da-b8fb6c5b8122",
-    "password": "KB3muvxsXooMRq-63kJtGvnssqI0u6b~.7",
-    "tenant": "b8b23322-4422-44f4-850d-cc4d30dff5b3"
-    }
-  ```
-
-```
-  az aks get-credentials --resource-group $(terraform output -raw resource_group_name) --name $(terraform output -raw aks_cluster_name)
-````
-
-
-First, pull a public Nginx image to your local computer. This example pulls an image from Microsoft Container Registry.
-
-```
-docker pull mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine
-docker run -it --rm -p 8080:80 mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine
-
-```
-`ctrl-c`
-
-```
-$ docker tag mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine pyxbringodevacr.azurecr.io/example/nginx
-$ az login
-$ az acr login --name pyxbringodevacr.azurecr.io
-$ docker push pyxbringodevacr.azurecr.io/example/nginx
-```
-
-docker rmi pyxbringodevacr.azurecr.io/example/nginx
-
-https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-prepare-app
-
- $ docker tag mcr.microsoft.com/oss/bitnami/redis:6.0.8 pyxbringodevacr.azurecr.io/example/redis
- $ docker tag mcr.microsoft.com/azuredocs/azure-vote-front:v1 pyxbringodevacr.azurecr.io/example/vote
-
-
-
+# Future
+- Link the tasks together with Ansible.

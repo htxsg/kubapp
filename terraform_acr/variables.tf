@@ -1,6 +1,3 @@
-
-# Assume project, environemnt and region variables already defined
-
 variable "project" {
   type = string
 }
@@ -16,5 +13,7 @@ variable "region" {
 }
 
 locals {
-  acr_name = join("a",[var.project,var.environment,"acr"])
+  akv_name = join("",[var.project,var.environment,"akv"])
+  acr_name = join("",[var.project,var.environment,"acr"])
+  
 }

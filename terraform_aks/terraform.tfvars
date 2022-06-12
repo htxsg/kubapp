@@ -1,0 +1,2 @@
+project = "kubappaks"
+environment = "dev"
