@@ -15,7 +15,6 @@ resource "azurerm_kubernetes_cluster" "aks" {
   identity {
     type = "SystemAssigned"
   }
-
 }
 
 # Grant AKS access to ACR

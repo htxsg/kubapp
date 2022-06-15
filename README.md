@@ -5,7 +5,7 @@ A full example environment build on terraform supporting app running on AKS and 
 2. Create ACR registry
 3. Create AKS Cluster
 4. Push docker image to ACR
-5. Attach container AKS CLuster
+5. Attach container AKS Cluster
 6. Auto deploy updates
 
 
@@ -62,7 +62,7 @@ $ cd ..
 ## Push Images to Azure Container Registry
 1. Once we confirm that the resources are greated in Azure. The next step is to deploy containers to the created AKS Cluster.
 
-2. We will e using a multi pods example based off [Microsoft Tutorial](https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-prepare-app). Pull the 2 images from public repository:
+2. We will e using a multi container example based off [Microsoft Tutorial](https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-prepare-app). Pull the 2 images from public repository:
 ```
 $ docker pull mcr.microsoft.com/oss/bitnami/redis:6.0.8
 $ docker pull mcr.microsoft.com/azuredocs/azure-vote-front:v1
@@ -165,5 +165,5 @@ This project does the following:
 - [Azure Container Registry](https://docs.microsoft.com/en-sg/azure/container-registry/)
 - [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-sg/azure/aks/)
 
-# Future
+# SPIKE
 - Link the tasks together with Ansible.

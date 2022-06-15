@@ -14,6 +14,5 @@ variable "region" {
 
 locals {
   akv_name = join("",[var.project,var.environment,"akv"])
-  acr_name = join("",[var.project,var.environment,"acr"])
-  
+  acr_name = join("",[var.project,var.environment,"acr"])  
 }
