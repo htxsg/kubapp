@@ -35,8 +35,8 @@ environment = "dev"
 4. Execute the following commands to create the resources:
 ```
 $ terraform init
-$ terrform plan
 $ az login
+$ terrform plan
 $ terraform apply
 ```
 
@@ -59,8 +59,81 @@ tenant_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 $ cd ..
 ```
 
-## Push Images to Azure Container Registry
-1. Once we confirm that the resources are greated in Azure. The next step is to deploy containers to the created AKS Cluster.
+## Check AKS is running
+1. We will use kubectl commandline tool to interact with the AKS cluster. First, we need to get the aks crendentials and save it in the .kube/config file:
+```
+$ az aks get-credentials --resource-group $(terraform output -raw resource_group_name) --name $(terraform output -raw aks_cluster_name)
+```
+
+2. This will be done automatically, howeever, if you are interested you can view the `~/.kube/config` file. It will contain entry that looks like the following:
+```
+- name: clusterUser_engaging-tick-rg_kubappaksdevaks
+  user:
+    client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZIVENDQXdXZ0F3SUJBZ0lRVnJjUVgyWUwzZktvS0tSVkQ1R3lpVEFOQmdrcWhraUc5dzBCQVFzRkFEQU4KTVFzd0NRWURWUVFERXdKallUQWVGdzB5TWpBMk1USXdOelV4TVRoYUZ
+    token: e6980eba26e473281b900a
+```
+
+3. Check that the AKS cluster is running by listing the namespaces:
+```
+$ $ kubectl get ns
+NAME                STATUS   AGE
+default             Active   32m
+gatekeeper-system   Active   21m
+kube-node-lease     Active   32m
+kube-public         Active   32m
+kube-system         Active   32m
+```
+
+# Example 1: Deploy a Serice with NGNIX Ingress Controller
+
+1. Install ngnix ingress controller using helm
+```
+helm upgrade --install ingress-nginx ingress-nginx --repo https://kubernetes.github.io/ingress-nginx --namespace ingress-nginx --create-namespace
+```
+
+2. Check pods running:
+```
+$ kubectl get pods --namespace ingress-nginx
+NAME                                        READY   STATUS      RESTARTS   AGE
+ingress-nginx-admission-create-z2qkh        0/1     Completed   0          5m35s
+ingress-nginx-admission-patch-tzp42         0/1     Completed   0          5m34s
+ingress-nginx-controller-7b768967bc-2s85b   1/1     Running     0          5m35s
+```
+
+3. Check service is running:
+```
+$ kubectl get service ingress-nginx-controller --namespace ingress-nginx
+NAME                       TYPE           CLUSTER-IP    EXTERNAL-IP   PORT(S)                      AGE
+ingress-nginx-controller   LoadBalancer   10.0.104.69   40.64.72.24   80:30543/TCP,443:30664/TCP   10m
+
+```
+
+## Add Hello World Serivce
+
+1. Create and run hello world service in namespace:
+```
+kubectl apply -f ../aks-hello-world.yml --namespace ingress-nginx
+```
+
+2. Check if service added:
+```
+$ kubectl get service --namespace ingress-nginx
+NAME                                 TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                      AGE
+aks-helloworld-one                   ClusterIP      10.0.144.104   <none>        80/TCP                       3m36s
+ingress-nginx-controller             LoadBalancer   10.0.123.185   20.42.146.9   80:30547/TCP,443:31499/TCP   27m
+ingress-nginx-controller-admission   ClusterIP      10.0.62.217    <none>        443/TCP                      27m
+```
+
+3. Add An ingress route for service:
+```
+apply -f ../ingress-route.yml --namespace ingress-nginx
+```
+
+4. Use your browser to acess the public IP of the ingress controller e.g. 20.42.146.9, you should see the hello world page.
+   
+
+# Example 2: Deploy Load Balanced Services in the same Cluster
+1. This is an example of 1 frontend service and 1 backsend service.
 
 2. We will e using a multi container example based off [Microsoft Tutorial](https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-prepare-app). Pull the 2 images from public repository:
 ```
@@ -91,20 +164,8 @@ $ az acr repository list -n kubappaksdevacr
 ```
 
 ## Deploy Application to Cluster
-1. We will use kubectl commandline tool to interact with the AKS cluster. First, we need to get the aks crendentials and save it in the .kube/config file:
-```
-$ az aks get-credentials --resource-group $(terraform output -raw resource_group_name) --name $(terraform output -raw aks_cluster_name)
-```
 
-2. This will be done automatically, howeever, if you are interested you can view the `/.kube/config` file. It will contain entry that looks like the following:
-```
-- name: clusterUser_engaging-tick-rg_kubappaksdevaks
-  user:
-    client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUZIVENDQXdXZ0F3SUJBZ0lRVnJjUVgyWUwzZktvS0tSVkQ1R3lpVEFOQmdrcWhraUc5dzBCQVFzRkFEQU4KTVFzd0NRWURWUVFERXdKallUQWVGdzB5TWpBMk1USXdOelV4TVRoYUZ
-    token: e6980eba26e473281b900a
-```
-
-2. Check that the AKS cluster is running by getting the nodes status:
+1. Check that the AKS cluster is running by getting the nodes status:
 ```
 $ kubectl get nodes
 NAME                              STATUS   ROLES   AGE   VERSION
@@ -112,19 +173,19 @@ aks-default-30452755-vmss000000   Ready    agent   24m   v1.22.6
 aks-default-30452755-vmss000001   Ready    agent   24m   v1.22.6
 ```
 
-3. The configuration of the service is described in `azure-vote-all-in-one-redis.yaml'. Edit lines 19 and 60 to replace with the correct image name based on the ACR we created:
+2. The configuration of the service is described in `azure-vote-all-in-one-redis.yaml'. Edit lines 19 and 60 to replace with the correct image name based on the ACR we created:
 ```
         image: kubappaksdevacr.azurecr.io/example/redis
         image: kubappaksdevacr.azurecr.io/example/vote  
 ```
 
-4. Create a namespace `vote` and deploy services to AKS cluster:
+3. Create a namespace `vote` and deploy services to AKS cluster:
 ```
 $ kubectl create namespace vote
 $ kubectl apply -f azure-vote-all-in-one-redis.yaml -n=vote
 ```
 
-5. Check ii services are running:
+4. Check if services are running:
 ```
 $ kubectl get service -n=vote
 NAME               TYPE           CLUSTER-IP    EXTERNAL-IP    PORT(S)        AGE
@@ -132,21 +193,21 @@ azure-vote-back    ClusterIP      10.0.169.94   <none>         6379/TCP       3m
 azure-vote-front   LoadBalancer   10.0.7.186    20.252.24.75   80:31166/TCP   3m33s
 ```
 
-6. Go to public IP to verify that app is acessible from internet. In our example http://20.190.16.45.
+5. Go to public IP to verify that app is acessible from internet. In our example http://20.190.16.45.
 
 
 # Clean Up
 
-1. Delete the services after testing:
-```$ kubectl delete service -n=vote azure-vote-back azure-vote-front 
-service "azure-vote-back" deleted
-service "azure-vote-front" deleted
+To Remove infrastructure. In the folder that you ran `terraform` earlier:
 ```
-
-2. Remove infrastructure:
-```
-$ cd terraform_aks
 $ terraform destroy
+
+Do you really want to destroy all resources?
+  Terraform will destroy all your managed infrastructure, as shown above.
+  There is no undo. Only 'yes' will be accepted to confirm.
+
+  Enter a value: yes
+
 ```
 
 # More Information
@@ -164,6 +225,11 @@ This project does the following:
 - [Terraform azurerm_container_registry](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/container_registry)
 - [Azure Container Registry](https://docs.microsoft.com/en-sg/azure/container-registry/)
 - [Azure Kubernetes Service (AKS)](https://docs.microsoft.com/en-sg/azure/aks/)
+- [mtls betwwen AGW and AKS](https://techcommunity.microsoft.com/t5/azure-paas-blog/mtls-between-aks-and-api-management/ba-p/1813887)
+
 
 # SPIKE
-- Link the tasks together with Ansible.
+- Integrate AGW with Nginx Ingress Controller
+- Add public IP and CDN
+- Auto-rotate certificates
+  
