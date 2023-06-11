@@ -86,7 +86,7 @@ kube-public         Active   32m
 kube-system         Active   32m
 ```
 
-# Example 1: Deploy Service with NGINX Ingress Controller
+## Example 1: Deploy Service with NGINX Ingress Controller
 
 1. Install ngnix ingress controller using helm
 ```
@@ -135,7 +135,7 @@ kubectl  apply -f ../ingress-route.yml --namespace kubappaks-dev
 8. Use your browser to acess the public IP of the ingress controller e.g. 20.99.142.175, you should see the hello world pages at `/`, `/hello-world-one` and `/hello-world-one`
    
 
-# Example 2: Deploy Frontend and Backend Services
+## Example 2: Deploy Frontend and Backend Services
 1. This is an example of 1 frontend service and 1 backsend service.
 
 ### Host images in ACR
