@@ -86,7 +86,7 @@ kube-public         Active   32m
 kube-system         Active   32m
 ```
 
-# Example 1: Deploy Serivce with NGINX Ingress Controller
+# Example 1: Deploy Service with NGINX Ingress Controller
 
 1. Install ngnix ingress controller using helm
 ```
@@ -109,14 +109,15 @@ NAME                       TYPE           CLUSTER-IP    EXTERNAL-IP     PORT(S) 
 ingress-nginx-controller   LoadBalancer   10.0.223.49   20.99.142.175   80:32426/TCP,443:31701/TCP   85s
 ```
 
-## Add Hello World Serivce
+### Add Hello World Services
+4. Adding 2 hello world services into the cluster.
 
-1. Create and run hello world service in namespace:
+5. Create and run hello world service in namespace:
 ```
 kubectl apply -f ../aks-hello-world.yml --namespace kubappaks-dev
 ```
 
-2. Check if service added:
+6. Check if service added:
 ```
 $ kubectl get service --namespace kubappaks-dev
 NAME                                 TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                      AGE
@@ -126,16 +127,18 @@ ingress-nginx-controller             LoadBalancer   10.0.223.49    20.99.142.175
 ingress-nginx-controller-admission   ClusterIP      10.0.163.166   <none>          443/TCP                      2m57s
 ```
 
-3. Add An ingress route for service:
+7. Add ingress route for services:
 ```
 kubectl  apply -f ../ingress-route.yml --namespace kubappaks-dev
 ```
 
-4. Use your browser to acess the public IP of the ingress controller e.g. 20.99.142.175, you should see the hello world pages at `/`, `/hello-world-one` and `/hello-world-one`
+8. Use your browser to acess the public IP of the ingress controller e.g. 20.99.142.175, you should see the hello world pages at `/`, `/hello-world-one` and `/hello-world-one`
    
 
-# Example 2: Deploy Load Balanced Services in the same Cluster
+# Example 2: Deploy Frontend and Backend Services
 1. This is an example of 1 frontend service and 1 backsend service.
+
+### Host images in ACR
 
 2. We will e using a multi container example based off [Microsoft Tutorial](https://docs.microsoft.com/en-us/azure/aks/tutorial-kubernetes-prepare-app). Pull the 2 images from public repository:
 ```
@@ -165,9 +168,9 @@ $ az acr repository list -n kubappaksdevacr
 ]
 ```
 
-## Deploy Application to Cluster
+### Deploy Application to Cluster
 
-1. Check that the AKS cluster is running by getting the nodes status:
+6. Check that the AKS cluster is running by getting the nodes status:
 ```
 $ kubectl get nodes
 NAME                              STATUS   ROLES   AGE   VERSION
@@ -175,19 +178,19 @@ aks-default-30452755-vmss000000   Ready    agent   24m   v1.22.6
 aks-default-30452755-vmss000001   Ready    agent   24m   v1.22.6
 ```
 
-2. The configuration of the service is described in `azure-vote-all-in-one-redis.yaml'. Edit lines 19 and 60 to replace with the correct image name based on the ACR we created:
+7. The configuration of the service is described in `azure-vote-all-in-one-redis.yaml'. Edit lines 19 and 60 to replace with the correct image name based on the ACR we created:
 ```
         image: kubappaksdevacr.azurecr.io/example/redis
         image: kubappaksdevacr.azurecr.io/example/vote  
 ```
 
-3. Create a namespace `vote` and deploy services to AKS cluster:
+8. Create a namespace `vote` and deploy services to AKS cluster:
 ```
 $ kubectl create namespace vote
 $ kubectl apply -f azure-vote-all-in-one-redis.yaml -n=vote
 ```
 
-4. Check if services are running:
+9. Check if services are running:
 ```
 $ kubectl get service -n=vote
 NAME               TYPE           CLUSTER-IP    EXTERNAL-IP    PORT(S)        AGE
@@ -195,10 +198,10 @@ azure-vote-back    ClusterIP      10.0.169.94   <none>         6379/TCP       3m
 azure-vote-front   LoadBalancer   10.0.7.186    20.252.24.75   80:31166/TCP   3m33s
 ```
 
-5. Go to public IP to verify that app is acessible from internet. In our example http://20.190.16.45.
+10. Go to public IP to verify that app is acessible from internet. In our example http://20.190.16.45.
 
 
-# Clean Up
+## Clean Up
 
 To Remove infrastructure. In the folder that you ran `terraform` earlier:
 ```
@@ -217,7 +220,7 @@ Do you really want to destroy all resources?
 ## akv_main.tf
 This project does the following:
 - Create a resource group
-- Create an azure key value
+- Create an azure key vault
 - Get tenant and subscription information using [Client Config Datasource](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config)
 
 
