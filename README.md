@@ -88,6 +88,8 @@ kube-system         Active   32m
 
 ## Example 1: Deploy Service with NGINX Ingress Controller
 
+### Install Ingress Controller
+
 1. Install ngnix ingress controller using helm
 ```
 helm upgrade --install ingress-nginx ingress-nginx --repo https://kubernetes.github.io/ingress-nginx --namespace kubappaks-dev --create-namespace
@@ -110,6 +112,7 @@ ingress-nginx-controller   LoadBalancer   10.0.223.49   20.99.142.175   80:32426
 ```
 
 ### Add Hello World Services
+
 4. Adding 2 hello world services into the cluster.
 
 5. Create and run hello world service in namespace:
@@ -126,6 +129,8 @@ aks-helloworld-two                   ClusterIP      10.0.180.177   <none>       
 ingress-nginx-controller             LoadBalancer   10.0.223.49    20.99.142.175   80:32426/TCP,443:31701/TCP   2m57s
 ingress-nginx-controller-admission   ClusterIP      10.0.163.166   <none>          443/TCP                      2m57s
 ```
+
+### Add Routes to Ingress Controller
 
 7. Add ingress route for services:
 ```
