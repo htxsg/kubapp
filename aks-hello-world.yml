@@ -19,7 +19,32 @@ spec:
         - containerPort: 80
         env:
         - name: TITLE
-          value: "Welcome to Azure Kubernetes Service (AKS)"
+          value: "Welcome to Hello World One"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aks-helloworld-two  
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aks-helloworld-two
+  template:
+    metadata:
+      labels:
+        app: aks-helloworld-two
+    spec:
+      containers:
+      - name: aks-helloworld-two
+        image: mcr.microsoft.com/azuredocs/aks-helloworld:v1
+        ports:
+        - containerPort: 80
+        env:
+        - name: TITLE
+          value: "Welcome to Hello World Two"
+
 ---
 apiVersion: v1
 kind: Service
@@ -28,6 +53,20 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-  - port: 80
+  - port: 3001
+    targetPort: 80
   selector:
     app: aks-helloworld-one
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aks-helloworld-two
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3002
+    targetPort: 80
+  selector:
+    app: aks-helloworld-two

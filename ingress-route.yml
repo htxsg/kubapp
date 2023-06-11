@@ -11,7 +11,7 @@ spec:
   rules:
   - http:
       paths:
-      - path: /hello-world-one(/|$)(.*)
+      - path: /hello-world-one
         pathType: Prefix
         backend:
           service:
@@ -25,6 +25,15 @@ spec:
             name: aks-helloworld-one
             port:
               number: 80
+      - path: /hello-world-two
+        pathType: Prefix
+        backend:
+          service:
+            name: aks-helloworld-two
+            port:
+              number: 80
+
+#Static content
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -38,7 +47,7 @@ spec:
   rules:
   - http:
       paths:
-      - path: /static(/|$)(.*)
+      - path: /static
         pathType: Prefix
         backend:
           service:

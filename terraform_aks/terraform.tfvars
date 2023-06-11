@@ -1,2 +1,2 @@
-project = "npy400kubappaks"
+project = "kubappaks"
 environment = "dev"

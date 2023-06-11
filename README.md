@@ -31,16 +31,20 @@ $ vi teraaform.tfvars
 project = "kubappaks"
 environment = "dev"
 ```
+4. Login to Azure:
+```
+$ az login
+```
+*Note: You may need to login to the specific tenant `az login --tenant xxx` that has your azure subscription.*
 
-4. Execute the following commands to create the resources:
+5. Execute the following commands to create the resources:
 ```
 $ terraform init
-$ az login
-$ terrform plan
+$ terraform plan
 $ terraform apply
 ```
 
-4. Check the output after terraform apply:
+6. Check the output after terraform apply:
 ```
 $ terraform output
 acr_admin_password = <sensitive>
@@ -54,10 +58,8 @@ resource_group_name = "engaging-tick-rg"
 subscription_id = "xxxxxxxx-b90b-4a32-8386-xxxxxxxxxxxx"
 tenant_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
-5. Go back to project root directory:
-```
-$ cd ..
-```
+
+
 
 ## Check AKS is running
 1. We will use kubectl commandline tool to interact with the AKS cluster. First, we need to get the aks crendentials and save it in the .kube/config file:
@@ -84,16 +86,16 @@ kube-public         Active   32m
 kube-system         Active   32m
 ```
 
-# Example 1: Deploy a Serice with NGNIX Ingress Controller
+# Example 1: Deploy Serivce with NGINX Ingress Controller
 
 1. Install ngnix ingress controller using helm
 ```
-helm upgrade --install ingress-nginx ingress-nginx --repo https://kubernetes.github.io/ingress-nginx --namespace ingress-nginx --create-namespace
+helm upgrade --install ingress-nginx ingress-nginx --repo https://kubernetes.github.io/ingress-nginx --namespace kubappaks-dev --create-namespace
 ```
 
 2. Check pods running:
 ```
-$ kubectl get pods --namespace ingress-nginx
+$ kubectl get pods --namespace kubappaks-dev
 NAME                                        READY   STATUS      RESTARTS   AGE
 ingress-nginx-admission-create-z2qkh        0/1     Completed   0          5m35s
 ingress-nginx-admission-patch-tzp42         0/1     Completed   0          5m34s
@@ -102,34 +104,34 @@ ingress-nginx-controller-7b768967bc-2s85b   1/1     Running     0          5m35s
 
 3. Check service is running:
 ```
-$ kubectl get service ingress-nginx-controller --namespace ingress-nginx
-NAME                       TYPE           CLUSTER-IP    EXTERNAL-IP   PORT(S)                      AGE
-ingress-nginx-controller   LoadBalancer   10.0.104.69   40.64.72.24   80:30543/TCP,443:30664/TCP   10m
-
+$ kubectl get service ingress-nginx-controller --namespace kubappaks-dev
+NAME                       TYPE           CLUSTER-IP    EXTERNAL-IP     PORT(S)                      AGE
+ingress-nginx-controller   LoadBalancer   10.0.223.49   20.99.142.175   80:32426/TCP,443:31701/TCP   85s
 ```
 
 ## Add Hello World Serivce
 
 1. Create and run hello world service in namespace:
 ```
-kubectl apply -f ../aks-hello-world.yml --namespace ingress-nginx
+kubectl apply -f ../aks-hello-world.yml --namespace kubappaks-dev
 ```
 
 2. Check if service added:
 ```
-$ kubectl get service --namespace ingress-nginx
-NAME                                 TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                      AGE
-aks-helloworld-one                   ClusterIP      10.0.144.104   <none>        80/TCP                       3m36s
-ingress-nginx-controller             LoadBalancer   10.0.123.185   20.42.146.9   80:30547/TCP,443:31499/TCP   27m
-ingress-nginx-controller-admission   ClusterIP      10.0.62.217    <none>        443/TCP                      27m
+$ kubectl get service --namespace kubappaks-dev
+NAME                                 TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)                      AGE
+aks-helloworld-one                   ClusterIP      10.0.154.230   <none>          3001/TCP                     43s
+aks-helloworld-two                   ClusterIP      10.0.180.177   <none>          3002/TCP                     42s
+ingress-nginx-controller             LoadBalancer   10.0.223.49    20.99.142.175   80:32426/TCP,443:31701/TCP   2m57s
+ingress-nginx-controller-admission   ClusterIP      10.0.163.166   <none>          443/TCP                      2m57s
 ```
 
 3. Add An ingress route for service:
 ```
-apply -f ../ingress-route.yml --namespace ingress-nginx
+kubectl  apply -f ../ingress-route.yml --namespace kubappaks-dev
 ```
 
-4. Use your browser to acess the public IP of the ingress controller e.g. 20.42.146.9, you should see the hello world page.
+4. Use your browser to acess the public IP of the ingress controller e.g. 20.99.142.175, you should see the hello world pages at `/`, `/hello-world-one` and `/hello-world-one`
    
 
 # Example 2: Deploy Load Balanced Services in the same Cluster
